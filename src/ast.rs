@@ -5,7 +5,7 @@ use tl::VDom;
 use tl::errors::ParseError as TlError;
 
 use crate::ast::bbcode::BBDoc;
-use crate::{IntoMarkdownAst, IntoBBCodeAst, IntoHtmlDom, Error, MarkdownFlavor, IntoMarkdownText, IntoBBCodeText, IntoHtmlText, IntoHtmlDomOwned};
+use crate::{IntoMarkdownAst, IntoBBCodeAst, IntoHtmlDom, Error as InternalError, MarkdownFlavor, IntoMarkdownText, IntoBBCodeText, IntoHtmlText, IntoHtmlDomOwned};
 
 use self::bbcode::Error as BbError;
 
@@ -13,20 +13,49 @@ use self::bbcode::Error as BbError;
 /// Markdown crate's AST; parsing is simply converting to Markdown.
 pub struct TmDoc(pub Root);
 
+pub enum ParseErrorKind {
+	/// The Markdown [Node] type is not [Root].
+	InvalidNodeType(Node),
+	/// Some error ocurred during AST conversion.
+	AstConversion,
+}
+
+pub struct ParseError<P> {
+	pub kind: ParseErrorKind,
+	pub inner: Option<InternalError<P>>
+}
+
+impl<P> ParseError<P> {
+	fn inv_node_type(node: Node) -> Self {
+		Self { kind: ParseErrorKind::InvalidNodeType(node), inner: None }
+	}
+
+	fn ast_conversion(err: InternalError<P>) -> Self {
+		Self { kind: ParseErrorKind::AstConversion, inner: Some(err) }
+	}
+}
+
 impl TmDoc {
-	pub fn parse_markdown(markdown: impl IntoMarkdownAst) -> TmDoc {
+	pub fn parse_markdown(markdown: impl IntoMarkdownAst, flavor: MarkdownFlavor) -> Result<TmDoc, ParseError<!>> {
+		let md = markdown.into_markdown_ast(flavor)
+			.map_err(ParseError::ast_conversion)?;
+		
+		if let Node::Root(root) = md {
+			Ok(TmDoc(root))
+		} else {
+			Err(ParseError::inv_node_type(md))
+		}
+	}
+
+	pub fn parse_bbcode(bbcode: impl IntoBBCodeAst) -> Result<TmDoc, ParseError<BbError>> {
 		todo!()
 	}
 
-	pub fn parse_bbcode(bbcode: impl IntoBBCodeAst) -> TmDoc {
+	pub fn parse_html<'d>(html: impl IntoHtmlDom<'d>) -> Result<TmDoc, ParseError<TlError>> {
 		todo!()
 	}
 
-	pub fn parse_html<'d>(html: impl IntoHtmlDom<'d>) -> TmDoc {
-		todo!()
-	}
-
-	pub fn parse_html_owned(html: impl IntoHtmlDomOwned) -> TmDoc {
+	pub fn parse_html_owned(html: impl IntoHtmlDomOwned) -> Result<TmDoc, ParseError<TlError>> {
 		todo!()
 	}
 
@@ -63,7 +92,7 @@ impl TmDoc {
 
 // 1:1 Markdown conversion
 impl IntoMarkdownAst for TmDoc {
-	fn into_markdown_ast(self, _: MarkdownFlavor) -> Result<Node, Error<!>> {
+	fn into_markdown_ast(self, _: MarkdownFlavor) -> Result<Node, InternalError<!>> {
 		Ok(self.to_md())
 	}
 }
@@ -75,7 +104,7 @@ impl IntoMarkdownText for TmDoc {
 }
 
 impl IntoBBCodeAst for TmDoc {
-	fn into_bbcode_ast(self) -> Result<BBDoc, Error<BbError>> { Ok(self.to_bb()) }
+	fn into_bbcode_ast(self) -> Result<BBDoc, InternalError<BbError>> { Ok(self.to_bb()) }
 }
 
 impl IntoBBCodeText for TmDoc {
@@ -85,7 +114,7 @@ impl IntoBBCodeText for TmDoc {
 }
 
 impl<'d> IntoHtmlDom<'d> for TmDoc {
-	fn into_html_dom(self) -> Result<VDom<'d>, Error<TlError>> { Ok(self.to_html()) }
+	fn into_html_dom(self) -> Result<VDom<'d>, InternalError<TlError>> { Ok(self.to_html()) }
 }
 
 impl IntoHtmlText for TmDoc {
