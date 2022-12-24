@@ -1,5 +1,8 @@
 #![feature(
+	assert_matches,
+	exclusive_range_pattern,
 	never_type,
+	trait_alias,
 )]
 
 pub mod ast;
@@ -9,7 +12,7 @@ use tl::VDomGuard;
 
 use std::io::{Read, Error as IoError, BufReader};
 
-use ast::bbcode::{BBDoc, Error as BbError, self};
+use ast::bbcode::{Error as BbError, self};
 use markdown::mdast::Node;
 use tl::{VDom, errors::ParseError as TlError};
 
@@ -36,16 +39,20 @@ impl MarkdownFlavor {
 
 // AST traits
 
+pub trait IntoCommonAst<E> {
+	fn into_common_ast(self) -> Result<TmDoc, E>;
+}
+
 /// Facilitates conversion or parsing into a Markdown [Node].
 pub trait IntoMarkdownAst {
 	/// Converts self into a Markdown [Node].
 	fn into_markdown_ast(self, flavor: MarkdownFlavor) -> Result<Node, Error<!>>;
 }
 
-/// Facilitates conversion or parsing into a [BBDoc] representation of BBCode.
+/// Facilitates conversion or parsing into a [TmDoc] representation of BBCode.
 pub trait IntoBBCodeAst {
-	/// Converts self into a [BBDoc].
-	fn into_bbcode_ast(self) -> Result<BBDoc, Error<BbError>>;
+	/// Converts self into a [TmDoc].
+	fn into_bbcode_ast(self) -> Result<TmDoc, Error<BbError>>;
 }
 
 /// Facilitates conversion or parsing into a [VDom] representation of HTML.
@@ -102,24 +109,20 @@ impl<R : Read> IntoMarkdownAst for BufReader<R> {
 	}
 }
 
-impl IntoBBCodeAst for BBDoc {
-	fn into_bbcode_ast(self) -> Result<BBDoc, Error<BbError>> { Ok(self) }
-}
-
 impl IntoBBCodeAst for &str {
-	fn into_bbcode_ast(self) -> Result<BBDoc, Error<BbError>> {
+	fn into_bbcode_ast(self) -> Result<TmDoc, Error<BbError>> {
 		bbcode::parse(self).map_err(Error::Parse)
 	}
 }
 
 impl IntoBBCodeAst for String {
-	fn into_bbcode_ast(self) -> Result<BBDoc, Error<BbError>> {
+	fn into_bbcode_ast(self) -> Result<TmDoc, Error<BbError>> {
 		bbcode::parse(&self).map_err(Error::Parse)
 	}
 }
 
 impl<R : Read> IntoBBCodeAst for BufReader<R> {
-	fn into_bbcode_ast(mut self) -> Result<BBDoc, Error<BbError>> {
+	fn into_bbcode_ast(mut self) -> Result<TmDoc, Error<BbError>> {
 		let mut text = String::new();
 
 		self.read_to_string(&mut text).map_err(Error::Read)?;
@@ -164,10 +167,6 @@ impl<R : Read> IntoHtmlDomOwned for BufReader<R> {
 
 impl IntoMarkdownText for Node {
 	fn into_markdown_text(self) -> String { self.to_string() }
-}
-
-impl IntoBBCodeText for BBDoc {
-	fn into_bbcode_text(self) -> String { self.to_string() }
 }
 
 impl<'d> IntoHtmlText for VDom<'d> {
