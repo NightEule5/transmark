@@ -7,7 +7,7 @@ use markdown::mdast::*;
 
 use crate::TmDoc;
 
-pub trait BuildFn<N : AsNode> = FnOnce(NodeBuilder<N>) -> NodeBuilder<N>;
+pub trait BuildFn<N : AsNode, E> = FnOnce(NodeBuilder<N>) -> Result<NodeBuilder<N>, E>;
 
 pub struct NodeBuilder<N : AsNode> { node: N }
 
@@ -58,8 +58,8 @@ impl NodeBuilder<List> {
 		self
 	}
 
-	pub fn item(self, build: impl BuildFn<ListItem>) -> Self {
-		self.append(build(new_list_item()).node())
+	pub fn item<E>(self, build: impl BuildFn<ListItem, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_list_item())?.node()))
 	}
 }
 
@@ -81,14 +81,14 @@ impl NodeBuilder<Table> {
 		self
 	}
 
-	pub fn row(self, build: impl BuildFn<TableRow>) -> Self {
-		self.append(build(new_table_row()).node())
+	pub fn row<E>(self, build: impl BuildFn<TableRow, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_table_row())?.node()))
 	}
 }
 
 impl NodeBuilder<TableRow> {
-	pub fn row(self, build: impl BuildFn<TableCell>) -> Self {
-		self.append(build(new_table_cell()).node())
+	pub fn row<E>(self, build: impl BuildFn<TableCell, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_table_cell())?.node()))
 	}
 }
 impl<N : AsNode> NodeBuilder<N> {
@@ -101,92 +101,92 @@ impl<N : BlockNode> NodeBuilder<N> {
 		self
 	}
 
-	pub fn block_quote(self, build: impl BuildFn<BlockQuote>) -> Self {
-		self.append(build(new_block_quote()).node())
+	pub fn block_quote<E>(self, build: impl BuildFn<BlockQuote, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_block_quote())?.node()))
 	}
 
 	pub fn line_break(self) -> Self {
 		self.append(new_break())
 	}
 
-	pub fn code(self, build: impl BuildFn<Code>) -> Self {
-		self.append(build(new_code()).node())
+	pub fn code<E>(self, build: impl BuildFn<Code, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_code())?.node()))
 	}
 
-	pub fn definition(self, build: impl BuildFn<Definition>) -> Self {
-		self.append(build(new_def()).node())
+	pub fn definition<E>(self, build: impl BuildFn<Definition, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_def())?.node()))
 	}
 
-	pub fn delete(self, build: impl BuildFn<Delete>) -> Self {
-		self.append(build(new_delete()).node())
+	pub fn delete<E>(self, build: impl BuildFn<Delete, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_delete())?.node()))
 	}
 
-	pub fn emphasis(self, build: impl BuildFn<Emphasis>) -> Self {
-		self.append(build(new_emph()).node())
+	pub fn emphasis<E>(self, build: impl BuildFn<Emphasis, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_emph())?.node()))
 	}
 
-	pub fn footnote_definition(self, build: impl BuildFn<FootnoteDefinition>) -> Self {
-		self.append(build(new_foot_def()).node())
+	pub fn footnote_definition<E>(self, build: impl BuildFn<FootnoteDefinition, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_foot_def())?.node()))
 	}
 
-	pub fn footnote_reference(self, build: impl BuildFn<FootnoteReference>) -> Self {
-		self.append(build(new_foot_ref()).node())
+	pub fn footnote_reference<E>(self, build: impl BuildFn<FootnoteReference, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_foot_ref())?.node()))
 	}
 
-	pub fn heading(self, build: impl BuildFn<Heading>) -> Self {
-		self.append(build(new_heading()).node())
+	pub fn heading<E>(self, build: impl BuildFn<Heading, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_heading())?.node()))
 	}
 
-	pub fn html(self, build: impl BuildFn<Html>) -> Self {
-		self.append(build(new_html()).node())
+	pub fn html<E>(self, build: impl BuildFn<Html, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_html())?.node()))
 	}
 
-	pub fn image(self, build: impl BuildFn<Image>) -> Self {
-		self.append(build(new_image()).node())
+	pub fn image<E>(self, build: impl BuildFn<Image, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_image())?.node()))
 	}
 
-	pub fn image_reference(self, build: impl BuildFn<ImageReference>) -> Self {
-		self.append(build(new_image_ref()).node())
+	pub fn image_reference<E>(self, build: impl BuildFn<ImageReference, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_image_ref())?.node()))
 	}
 
-	pub fn inline_code(self, build: impl BuildFn<InlineCode>) -> Self {
-		self.append(build(new_inline_code()).node())
+	pub fn inline_code<E>(self, build: impl BuildFn<InlineCode, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_inline_code())?.node()))
 	}
 
-	pub fn inline_math(self, build: impl BuildFn<InlineMath>) -> Self {
-		self.append(build(new_inline_math()).node())
+	pub fn inline_math<E>(self, build: impl BuildFn<InlineMath, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_inline_math())?.node()))
 	}
 
-	pub fn link(self, build: impl BuildFn<Link>) -> Self {
-		self.append(build(new_link()).node())
+	pub fn link<E>(self, build: impl BuildFn<Link, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_link())?.node()))
 	}
 
-	pub fn link_reference(self, build: impl BuildFn<LinkReference>) -> Self {
-		self.append(build(new_link_ref()).node())
+	pub fn link_reference<E>(self, build: impl BuildFn<LinkReference, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_link_ref())?.node()))
 	}
 
-	pub fn list(self, build: impl BuildFn<List>) -> Self {
-		self.append(build(new_list()).node())
+	pub fn list<E>(self, build: impl BuildFn<List, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_list())?.node()))
 	}
 
-	pub fn math(self, build: impl BuildFn<Math>) -> Self {
-		self.append(build(new_math()).node())
+	pub fn math<E>(self, build: impl BuildFn<Math, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_math())?.node()))
 	}
 
-	pub fn paragraph(self, build: impl BuildFn<Paragraph>) -> Self {
-		self.append(build(new_para()).node())
+	pub fn paragraph<E>(self, build: impl BuildFn<Paragraph, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_para())?.node()))
 	}
 
-	pub fn strong(self, build: impl BuildFn<Strong>) -> Self {
-		self.append(build(new_strong()).node())
+	pub fn strong<E>(self, build: impl BuildFn<Strong, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_strong())?.node()))
 	}
 
-	pub fn table(self, build: impl BuildFn<Table>) -> Self {
-		self.append(build(new_table()).node())
+	pub fn table<E>(self, build: impl BuildFn<Table, E>) -> Result<Self, E> {
+		Ok(self.append(build(new_table())?.node()))
 	}
 
-	pub fn text(self, build: impl BuildFn<Text>) -> Self {
-		self.append(build(new_text()).node())
+	pub fn text(self, value: String) -> Self {
+		self.append(new_text(value))
 	}
 
 	pub fn thematic_break(self) -> Self {
@@ -462,10 +462,8 @@ fn new_table_row() -> NodeBuilder<TableRow> {
 	}
 }
 
-fn new_text() -> NodeBuilder<Text> {
-	NodeBuilder {
-		node: Text { value: String::new(), position: None }
-	}
+fn new_text(value: String) -> Text {
+	Text { value, position: None }
 }
 
 fn new_them_break() -> ThematicBreak {
