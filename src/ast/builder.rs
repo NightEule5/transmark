@@ -2,6 +2,7 @@ mod node_traits;
 pub(crate) use node_traits::*;
 
 use std::assert_matches::assert_matches;
+use std::collections::HashMap;
 
 use markdown::mdast::*;
 
@@ -9,11 +10,21 @@ use crate::TmDoc;
 
 pub trait BuildFn<N : AsNode, E> = FnOnce(NodeBuilder<N>) -> Result<NodeBuilder<N>, E>;
 
+/// Populates a [NodeBuilder].
+pub trait Populate<N : AsNode, E> {
+	/// Returns a populated [NodeBuilder] wrapped in a [Result].
+	fn populate(self) -> Result<NodeBuilder<N>, E>;
+}
+
+impl<N : AsNode, E, P> Populate<N, E> for P where P : FnOnce() -> Result<NodeBuilder<N>, E> {
+	fn populate(self) -> Result<NodeBuilder<N>, E> { self() }
+}
+
 pub struct NodeBuilder<N : AsNode> { node: N }
 
 impl NodeBuilder<Root> {
-	pub fn new() -> Self {
-		Self { node: new_root() }
+	fn build_fake_root<E>(build: impl BuildFn<Root, E>) -> Result<TmDoc, E> {
+		Ok(build(Self::default())?.build())
 	}
 
 	pub fn build(self) -> TmDoc {
@@ -34,6 +45,47 @@ impl NodeBuilder<Heading> {
 
 		self.node.depth = depth;
 		self
+	}
+}
+
+impl NodeBuilder<Html> {
+	pub fn build_value<E>(
+		mut self,
+		tag: &str,
+		params: HashMap<&str, &str>,
+		build_inner: impl BuildFn<Root, E>
+	) -> Result<Self, E> {
+		let fake_root = NodeBuilder::build_fake_root(build_inner)?;
+		let inner     = fake_root.to_md_text();
+		let inner_len = inner.len();
+
+		let mut outer_len = tag.len() * 2 + 5; // <tag></tag>
+				outer_len += params
+					.iter()
+					.map(|(k, v)|
+						k.len() + v.len() + 4 // .k1="v1".k2="v2" ...
+					).sum::<usize>();
+		let mut value = String::with_capacity(outer_len + inner_len);
+
+		value.push('<');
+		value.push_str(tag);
+		
+		value = params.into_iter().fold(value, |mut value, (k, v)| {
+			value.push(' ');
+			value.push_str(k);
+			value.push_str("=\"");
+			value.push_str(v);
+			value.push('"');
+			value
+		});
+
+		value.push('>');
+		value.push_str(&inner);
+		value.push_str("</");
+		value.push_str(tag);
+		value.push_str(">\n");
+
+		Ok(self.set_value(value))
 	}
 }
 
@@ -91,6 +143,7 @@ impl NodeBuilder<TableRow> {
 		Ok(self.append(build(new_table_cell())?.node()))
 	}
 }
+
 impl<N : AsNode> NodeBuilder<N> {
 	pub fn node(self) -> N { self.node }
 }
@@ -209,6 +262,11 @@ impl<N : ParentNode<C>, C : AsNode> ParentNodeBuilder<N, C> for NodeBuilder<N> {
 }
 
 impl<N : TextNode> NodeBuilder<N> {
+	pub fn append_value(mut self, text: String) -> Self {
+		self.node.append_value(text);
+		self
+	}
+
 	pub fn set_value(mut self, text: String) -> Self {
 		self.node.set_value(text);
 		self
@@ -235,6 +293,10 @@ impl<N : RefKindNode> NodeBuilder<N> {
 }
 
 impl<N : LinkNode> NodeBuilder<N> {
+	pub fn set_title_html(mut self, title: NodeBuilder<Html>) -> Self {
+		self.set_title(Some(title.node.value))
+	}
+
 	pub fn set_title(mut self, title: Option<String>) -> Self {
 		self.node.set_title(title);
 		self
@@ -251,6 +313,112 @@ impl<N : AltNode> NodeBuilder<N> {
 		self.node.set_alt(alt);
 		self
 	}
+}
+
+impl Default for NodeBuilder<BlockQuote> {
+	fn default() -> Self { new_block_quote() }
+}
+
+impl Default for NodeBuilder<Break> {
+	fn default() -> Self { Self { node: new_break() } }
+}
+
+impl Default for NodeBuilder<Code> {
+	fn default() -> Self { new_code() }
+}
+
+impl Default for NodeBuilder<Definition> {
+	fn default() -> Self { new_def() }
+}
+
+impl Default for NodeBuilder<Delete> {
+	fn default() -> Self { new_delete() }
+}
+
+impl Default for NodeBuilder<Emphasis> {
+	fn default() -> Self { new_emph() }
+}
+
+impl Default for NodeBuilder<FootnoteDefinition> {
+	fn default() -> Self { new_foot_def() }
+}
+
+impl Default for NodeBuilder<Heading> {
+	fn default() -> Self { new_heading() }
+}
+
+impl Default for NodeBuilder<Html> {
+	fn default() -> Self { new_html() }
+}
+
+impl Default for NodeBuilder<Image> {
+	fn default() -> Self { new_image() }
+}
+
+impl Default for NodeBuilder<ImageReference> {
+	fn default() -> Self { new_image_ref() }
+}
+
+impl Default for NodeBuilder<InlineCode> {
+	fn default() -> Self { new_inline_code() }
+}
+
+impl Default for NodeBuilder<InlineMath> {
+	fn default() -> Self { new_inline_math() }
+}
+
+impl Default for NodeBuilder<Link> {
+	fn default() -> Self { new_link() }
+}
+
+impl Default for NodeBuilder<LinkReference> {
+	fn default() -> Self { new_link_ref() }
+}
+
+impl Default for NodeBuilder<List> {
+	fn default() -> Self { new_list() }
+}
+
+impl Default for NodeBuilder<ListItem> {
+	fn default() -> Self { new_list_item() }
+}
+
+impl Default for NodeBuilder<Math> {
+	fn default() -> Self { new_math() }
+}
+
+impl Default for NodeBuilder<Paragraph> {
+	fn default() -> Self { new_para() }
+}
+
+impl Default for NodeBuilder<Strong> {
+	fn default() -> Self { new_strong() }
+}
+
+impl Default for NodeBuilder<Root> {
+	fn default() -> Self {
+		Self { node: new_root() }
+	}
+}
+
+impl Default for NodeBuilder<Table> {
+	fn default() -> Self { new_table() }
+}
+
+impl Default for NodeBuilder<TableCell> {
+	fn default() -> Self { new_table_cell() }
+}
+
+impl Default for NodeBuilder<TableRow> {
+	fn default() -> Self { new_table_row() }
+}
+
+impl Default for NodeBuilder<Text> {
+	fn default() -> Self { Self { node: new_text(String::new()) } }
+}
+
+impl Default for NodeBuilder<ThematicBreak> {
+	fn default() -> Self { Self{ node: new_them_break() } }
 }
 
 fn new_root() -> Root {

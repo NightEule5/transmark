@@ -2,10 +2,13 @@
 	assert_matches,
 	exclusive_range_pattern,
 	never_type,
+	option_zip,
 	trait_alias,
 )]
 
 pub mod ast;
+pub(crate) mod util;
+pub mod markdown_text;
 pub use ast::TmDoc;
 use markdown::{to_mdast, ParseOptions};
 use tl::VDomGuard;
@@ -52,7 +55,7 @@ pub trait IntoMarkdownAst {
 /// Facilitates conversion or parsing into a [TmDoc] representation of BBCode.
 pub trait IntoBBCodeAst {
 	/// Converts self into a [TmDoc].
-	fn into_bbcode_ast(self) -> Result<TmDoc, Error<BbError>>;
+	fn into_bbcode_ast<'t>(self) -> Result<TmDoc, Error<BbError<'t>>>;
 }
 
 /// Facilitates conversion or parsing into a [VDom] representation of HTML.
@@ -109,27 +112,27 @@ impl<R : Read> IntoMarkdownAst for BufReader<R> {
 	}
 }
 
-impl IntoBBCodeAst for &str {
-	fn into_bbcode_ast(self) -> Result<TmDoc, Error<BbError>> {
+/*impl IntoBBCodeAst for &str {
+	fn into_bbcode_ast<'t>(self) -> Result<TmDoc, Error<BbError<'t>>> {
 		bbcode::parse(self).map_err(Error::Parse)
 	}
-}
+}*/
 
-impl IntoBBCodeAst for String {
-	fn into_bbcode_ast(self) -> Result<TmDoc, Error<BbError>> {
+/*impl IntoBBCodeAst for String {
+	fn into_bbcode_ast<'t>(self) -> Result<TmDoc, Error<BbError<'t>>> {
 		bbcode::parse(&self).map_err(Error::Parse)
 	}
-}
+}*/
 
-impl<R : Read> IntoBBCodeAst for BufReader<R> {
-	fn into_bbcode_ast(mut self) -> Result<TmDoc, Error<BbError>> {
+/*impl<R : Read> IntoBBCodeAst for BufReader<R> {
+	fn into_bbcode_ast<'t>(mut self) -> Result<TmDoc, Error<BbError<'t>>> {
 		let mut text = String::new();
 
 		self.read_to_string(&mut text).map_err(Error::Read)?;
 
 		bbcode::parse(&text).map_err(Error::Parse)
 	}
-}
+}*/
 
 impl<'d> IntoHtmlDom<'d> for VDom<'d> {
 	fn into_html_dom(self) -> Result<VDom<'d>, Error<TlError>> { Ok(self) }
