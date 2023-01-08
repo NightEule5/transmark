@@ -9,6 +9,7 @@ edition = "2021"
 fancy-regex = "0.10.0"
 lazy_static = "1.4.0"
 markdown = "1.0.0-alpha.5"
+property = "0.3.3"
 regex = { version = "1.7.0" }
 regex-macro = "0.2.0"
 tl = "0.7.7"

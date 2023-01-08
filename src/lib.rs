@@ -9,6 +9,7 @@
 pub mod ast;
 pub(crate) mod util;
 pub mod markdown_text;
+pub mod tmast;
 pub use ast::TmDoc;
 use markdown::{to_mdast, ParseOptions};
 use tl::VDomGuard;
