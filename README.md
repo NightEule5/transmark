@@ -8,7 +8,7 @@ Add `transmark` to your dependencies by running `cargo add transmark --git https
 
 ```toml
 [dependencies]
-transmark = { git = "https://github.com/NightEule5/transmark", tag = "v0.1.0 }
+transmark = { git = "https://github.com/NightEule5/transmark", tag = "v0.1.0" }
 ```
 
 First, parse your document or pass in an already parsed AST from a supported library:
