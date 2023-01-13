@@ -14,12 +14,13 @@ transmark = { git = "https://github.com/NightEule5/transmark", tag = "v0.1.0" }
 First, parse your document or pass in an already parsed AST from a supported library:
 
 ```rust
-use transmark::{TmDoc, IntoHtmlDom};
+use transmark::{Markup, ConvertMarkup};
 use std::io::BufReader;
 use std::fs::File;
 use tl::{VDom, ParserOptions, parse};
 
-let html_text: &str = r#"
+fn main() {
+	let text: &str = r#"
 <html>
 	<head></head>
 	<body>
@@ -30,44 +31,101 @@ let html_text: &str = r#"
 </html>
 "#;
 
-let file: File = File::open("doc.html");
-let vdom: VDom<'_> = parse(html_text, ParserOptions::default());
+	let file: File = File::open("doc.html").unwrap();
+	let reader: BufReader<_> = BufReader::new(file);
 
-let text_doc: TmDoc = TmDoc::parse_html(html_text);
-let file_doc: TmDoc = TmDoc::parse_html(html_file);
-let vdom_doc: TmDoc = TmDoc::parse_html(html_vdom);
+	let vdom: VDom<'_> = parse(html_text, ParserOptions::default());
+
+	let text_doc: Markup = Markup::from_html(text);
+	let file_doc: Markup = Markup::from_html(reader);
+	let vdom_doc: Markup = Markup::convert_from(vdom);
+}
 ```
 
 Then, convert to another language's AST:
 
 ```rust
-use transmark::{TmDoc, IntoMarkdownAst, IntoBBCodeAst, IntoHtmlDom};
-use transmark::ast::bbcode::BBDoc;
+use transmark::{Markup, ConvertMarkup};
 use markdown::mdast::Node;
 use tl::VDom;
 
-let doc: TmDoc = ...;
+fn main() -> transmark::Result<()> {
+	let doc: Markup = ...;
 
-let md: Node = doc.convert_to_md();
-let bb: BBDoc = doc.convert_to_bb();
-let html: VDom<'_> = doc.convert_to_html();
+	let md: Node = doc.convert_into()?;
+	let html: VDom<'_> = doc.convert_into()?;
+	
+	Ok(())
+}
 ```
 
 Alternatively, write converted markup as text:
 
 ```rust
-use transmark::{TmDoc, IntoMarkdownText, IntoBBCodeText, IntoHtmlText};
+use transmark::{Markup, WriteMarkup};
 
-let doc: TmDoc = ...;
+fn main() -> transmark::Result<()> {
+	let doc: Markup = ...;
 
-let md: String = doc.convert_to_md_text();
-let bb: String = doc.convert_to_bb_text();
-let html: String = doc.convert_to_html_text();
+	let md: String = doc.write_md_text()?;
+	let bb: String = doc.write_bb_text()?;
+	let html: String = doc.write_html_text()?;
+	
+	Ok(())
+}
 ```
 
-### Note on conversion lossiness
+### Custom languages
 
-Note that because some markup constructs will have no equivalent in other languages, conversion can be lossy. Any styling in HTML, font colors or sizes in BBCode, etc. may be absent in the generated markup.
+Custom languages can be added by implementing the `ConvertMarkup`, `WriteMarkup`, and `ReadMarkup` traits on the AST:
+
+```rust
+use transmark::{Markup, ConvertMarkup, WriteMarkup, ReadMarkup};
+use std::io::{BufReader, BufWriter, Read, Write};
+
+// Your AST
+struct Doc {
+	// ...
+}
+
+// Some conversion error information
+struct Error {
+	// ...
+}
+
+// Convert to and from the common AST
+impl ConvertMarkup<Markup<'_>, Error> for Doc {
+	fn convert_into(self) -> Result<Markup<'_>, Error> {
+		// ...
+	}
+
+	fn convert_from(markup: Markup<'_>) -> Result<Self, Error> {
+		// ...
+	}
+}
+
+// Write markup text
+impl WriteMarkup<Error> for Doc {
+	fn write_markup_text(self) -> Result<String, Error> {
+		// ...
+	}
+
+	fn write_markup<W: Write>(self, buf: &mut BufWriter<W>) -> Result<(), Error> {
+		// ...
+	}
+}
+
+// Read markup text
+impl WriteMarkup<Error> for Doc {
+	fn read_markup_text(value: &str) -> Result<Self, Error> {
+		// ...
+	}
+
+	fn read_markup<R: Read>(buf: &mut BufReader<R>) -> Result<Self, Error> {
+		// ...
+	}
+}
+```
 
 ## License
 
